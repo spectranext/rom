@@ -22,7 +22,7 @@ P2OUT = page2.bin
 P2LDFLAGS = -T ../modules/modules.ld -Map $(P2OUT).map -L ../syslib
 P2LIBS = -lromui
 
-P3OBJS = tnfs_vectors.o tnfs_init.o tnfs_core.o tnfs_mount.o tnfs_file.o tnfs_directory.o inetinit.o dhcpclient.o dhcp_data.o basstart.o startmsg.o tnfs_modcall.o parseurl.o automount.o
+P3OBJS = tnfs_vectors.o tnfs_init.o tnfs_core.o tnfs_mount.o tnfs_file.o tnfs_directory.o inetinit.o basstart.o startmsg.o tnfs_modcall.o parseurl.o automount.o
 P3OUT = page3.bin
 P3LDFLAGS = -T ../modules/modules.ld -Map $(P3OUT).map
 
@@ -35,6 +35,14 @@ JPTABLEOBJS = jumptable.o
 JPTABLEOUT = jumptable.bin
 JPTABLELDFLAGS = -T jumptable.ld
 
+KESXDOSOBJS = kesxdos.o
+KESXDOSOUT = kesxdos.bin
+KESXDOSLDFLAGS = -T kesxdos.ld -Map $(KESXDOSOUT).map
+
+KESXDOSJPOBJS = kesxdosjp.o
+KESXDOSJPOUT = kesxdosjp.bin
+KESXDOSJPLDFLAGS = -T kesxdosjp.ld -Map $(KESXDOSJPOUT).map
+
 DATEFILE = date.xinc
 VERFILE = ver.xinc
 P3SYMS = page3.xinc
@@ -45,7 +53,7 @@ P0SYMS = page0.xinc
 INSTALLDIR = ../installer
 CP = cp -f
 
-all:	page0 page1 page2 page3 spxcontroller jptable
+all:	page0 page1 page2 page3 spxcontroller jptable kesxdos kesxdosjp
 
 page0:	ver p1syms p2syms p3syms $(P0OBJS)
 	$(LD) -o $(P0OUT) $(P0OBJS) $(P0LDFLAGS) $(P0LIBS)
@@ -74,6 +82,14 @@ modman:	$(MODMANOBJS)
 jptable:	p0syms $(JPTABLEOBJS)
 	$(LD) -o $(JPTABLEOUT) $(JPTABLEOBJS) $(JPTABLELDFLAGS)
 	$(CP) $(JPTABLEOUT) $(INSTALLDIR)
+
+kesxdos:	$(KESXDOSOBJS)
+	$(LD) -o $(KESXDOSOUT) $(KESXDOSOBJS) $(KESXDOSLDFLAGS)
+	$(CP) $(KESXDOSOUT) $(INSTALLDIR)
+
+kesxdosjp:	$(KESXDOSJPOBJS)
+	$(LD) -o $(KESXDOSJPOUT) $(KESXDOSJPOBJS) $(KESXDOSJPLDFLAGS)
+	$(CP) $(KESXDOSJPOUT) $(INSTALLDIR)
 
 date:	$(DATEFILE)
 $(DATEFILE):

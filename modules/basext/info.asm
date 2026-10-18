@@ -35,6 +35,9 @@
 F_showfileinfo:
 	ld hl, INTERPWKSPC
 	call F_basstrcpy	; prepare BASIC string for use
+
+.globl F_showfileinfo_path
+F_showfileinfo_path:
 	
 	ld hl, INTERPWKSPC
 	ld de, INTERPWKSPC+256	; where to return the data

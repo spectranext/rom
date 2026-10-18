@@ -44,7 +44,7 @@
 .text
 .globl F_reservepage
 F_reservepage:
-	ld b, HIGHEST_PAGE-LOWEST_PAGE+1	; number of RAM pages that can be reserved
+	ld b, 23		; C1-D7; D8-D9 are dot pages, DA-DF is workspace
 	ld hl, pagealloc	; search the page allocation table for a page 
 	ex af, af'		; save A
 .searchloop1:
