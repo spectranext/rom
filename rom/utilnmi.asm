@@ -26,6 +26,27 @@
 
 ; Utility ROM - NMI handler
 .text
+.globl F_nmihandler_modcall
+F_nmihandler_modcall:
+	push ix
+	push iy
+	push hl
+	push de
+	push bc
+	push af
+	ld a, (v_pga)
+	push af
+	call F_nmihandler
+	pop af
+	call SETPAGEA
+	pop af
+	pop bc
+	pop de
+	pop hl
+	pop iy
+	pop ix
+	ret
+
 .globl F_nmihandler
 F_nmihandler:
 	call F_savescreen	; save frame buffer contents
@@ -63,6 +84,12 @@ F_nmihandler:
 	call PRINT42
 	ld hl, MENU_nmi		; generate the menu
 	call F_genmenu
+
+    ld a, NEWLINE
+	call PUTCHAR42
+    ld hl, buf_workspace
+    call PRINT42
+
 	ld hl, MENU_nmi
 	call F_getmenuopt	; act on user keypress
 	jr nz, .menuloop1	; routines set Z if they want to exit
@@ -128,6 +155,21 @@ F_config:
 	rst MODULECALL_NOPAGE
 	ret
 
+;---------------------------------------------------------------------
+; F_wifi
+; Invokes the WiFi module
+.globl F_wifi
+F_wifi:
+	ld hl, 0xD700		; module D7 (Wi-FI Module) call 0x00
+	rst MODULECALL_NOPAGE
+	ret
+
+;---------------------------------------------------------------------
+; F_spectranext_settings
+; Invokes the SpectraNext settings menu
+.globl F_spectranext_settings
+F_spectranext_settings:
+	ld hl, 0xD701		; module D7 (Wi-FI Module) call 0x01
 	rst MODULECALL_NOPAGE
 	ret
 
@@ -288,6 +330,8 @@ F_exit:
 
 MENU_nmi:
 	defw	STR_config,F_config
+	defw	STR_wifi,F_wifi
+	defw	STR_spectranext_settings,F_spectranext_settings
 	defw	STR_rom,F_rom
 	defw	STR_loader,F_loader
 	defw	STR_snapshot,F_snapshot

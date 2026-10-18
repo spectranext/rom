@@ -22,6 +22,8 @@
 .include	"spectranet.inc"
 .include	"ctrlchars.inc"
 
+extern op_get_message
+
 ; Basstart.asm0 runs module functions that should be run once BASIC has
 ; shown the copyright message. The basstart function gets called from
 ; a trap.
@@ -33,12 +35,6 @@
 F_startmsg:
 	ld hl, STR_rel
 	call PRINT42
-	ld hl, bldstr
-	call PRINT42
-	ld hl, STR_date
-	call PRINT42
-	ld hl, blddate
-	call PRINT42
 	ld hl, STR_ip
 	call PRINT42
 	ld de, 0x3000		; workspace destination for IP address
@@ -48,13 +44,31 @@ F_startmsg:
 	call LONG2IPSTRING	; convert to a string
 	ld hl, 0x3004		; string pointer
 	call PRINT42
-	ld a, NEWLINE
-	call PUTCHAR42
-	ret
+	ld hl, STR_build
+	call PRINT42
+	ld hl, bldstr
+	call PRINT42
+	ld hl, 0x3000
+	ld a, CMD_GET_MESSAGE
+	call SPECTRANEXT
+	jr c, skip_message_print
+	ld hl, 0x3000
+	call PRINT42
+
+skip_message_print:
+	ld hl, STR_boot_ok
+	ld bc, STDOUTREG    ; signal an OK to
+print_boot_str:         ; 0x043b port (STDOUT) to indicate
+    ld a, (hl)
+    or a
+    ret z
+	out (c), a          ; that the system has fully booted
+	inc hl
+	jr print_boot_str
 .data
-STR_rel:		defb "Alioth Spectranet",NEWLINE,"Build: ",0
-STR_ip:		defb "   IP: ",0
-STR_date:	defb " Date: ",0
-.include	"date.xinc"
+STR_boot_ok:    defb "BOOT OK!",NEWLINE,0
+STR_rel:		defb "Alioth Spectranet (Spectranext)",NEWLINE,0
+STR_ip:		    defb "IP: ",0
+STR_build:		defb " Build: ",0
 .include 	"ver.xinc"
 	

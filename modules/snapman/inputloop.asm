@@ -82,6 +82,9 @@ F_mainloop:
 	res 0, a
 	ld (v_inputflags), a	; reset the flag
 	jp F_leave		; restore memory and leave
+	push af
+	call KEYUP
+	pop af
 
 ;------------------------------------------------------------------------
 ; F_exit
