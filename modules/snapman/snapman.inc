@@ -28,11 +28,11 @@ FNAMESZ			equ	16	; Max filename size
 NORMAL_ATTR		equ	0x04	; Background attr
 SELECTED_ATTR		equ	0x32	; Selected item attr
 ATTR_BASE		equ	22528	; Where the attrs start
-STACK_AFALT             equ 	NMISTACK-14
-STACK_AF                equ 	NMISTACK-12
-STACK_BC                equ 	NMISTACK-10
-STACK_DE                equ 	NMISTACK-8
-STACK_HL                equ 	NMISTACK-6
+STACK_AFALT             equ 	NMISTACK-18
+STACK_AF                equ 	NMISTACK-16
+STACK_BC                equ 	NMISTACK-14
+STACK_DE                equ 	NMISTACK-12
+STACK_HL                equ 	NMISTACK-10
 
 
 v_strbuf		equ	0x1000	; Address of string buffer
@@ -66,6 +66,8 @@ v_numdirs		equ	0x1052	; Number of directories
 v_numsnas		equ	0x1053	; Number of snapshots
 v_dirptr		equ	0x1054	; Directory pointer
 v_snaptr		equ	0x1056	; Snapshot pointer
+v_savedmount		equ	0x1058	; Mount point active before snapman
+v_selectedmount		equ	0x1059	; Mount point selected for snapman
 
 v_dirwkspc		equ	0x3000	; Directory entry buffer
 v_statinfo		equ	0x3080	; Information returned by STAT
@@ -80,4 +82,3 @@ v_snastrings		equ	0x1900
 v_snapfd                equ 0x32FF      ; Snapshot FD
 v_stacksave             equ 0x32FD      ; Save the stack pointer
 v_snapstack             equ 0x32FB      ; Start of snapshot stack
-

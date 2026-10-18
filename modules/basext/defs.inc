@@ -26,11 +26,11 @@ v_snapfd		equ 0x32FF	; Snapshot FD
 v_stacksave		equ 0x32FD	; Save the stack pointer
 v_snapstack		equ 0x32FB	; Start of snapshot stack
 
-STACK_AFALT		equ NMISTACK-14
-STACK_AF		equ NMISTACK-12
-STACK_BC		equ NMISTACK-10
-STACK_DE		equ NMISTACK-8
-STACK_HL		equ NMISTACK-6
+STACK_AFALT		equ NMISTACK-18
+STACK_AF		equ NMISTACK-16
+STACK_BC		equ NMISTACK-14
+STACK_DE		equ NMISTACK-12
+STACK_HL		equ NMISTACK-10
 
 AUTOBOOT		equ 0x81	; Config ID for autoboot flag
 ROM_ID			equ 0xFD

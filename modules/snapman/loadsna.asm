@@ -163,14 +163,14 @@ J_snapdie:
 ; F_readscreen: Read the screen memory into Spectranet RAM
 .globl F_readscreen
 F_readscreen: 
-	ld a, FRAME_COPY_PAGES	; first page
+	ld a, 0xDA		; first page
 	call PUSHPAGEA		; switch and store page number
 	ld de, 0x1000
 	ld bc, 0x1000
 	ld a, (v_snapfd)
 	call READ
 	jr c,  .restoreerr4
-	ld a, FRAME_COPY_PAGES+1
+	ld a, 0xDB
 	call SETPAGEA
 	ld de, 0x1000
 	ld bc, 0xB00
@@ -187,6 +187,7 @@ F_readscreen:
 ; On success, snapshot is launched (effectively, we don't return)
 .globl F_loadsna128
 F_loadsna128: 
+	di			; don't want interrupts during bank switching
 	ld a, (v_snapfd)
 	ld de, HEADER		; where to put the header
 	ld bc, HEADERSZ		; length of the header
