@@ -72,4 +72,3 @@ SECTIONS
          __Hbss = .;
         } > pagez
 }
-

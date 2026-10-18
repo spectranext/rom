@@ -26,7 +26,6 @@
 .include	"fcntl.inc"
 .include	"spectranet.inc"
 .include	"sysvars.inc"
-.include	"sysdefs.inc"
 
 .text
 ;------------------------------------------------------------------------

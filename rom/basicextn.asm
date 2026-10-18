@@ -427,5 +427,3 @@ F_pstrcmp:
 	cp (hl)			; set zero flag if OK
 	ld a, b			; return with char at CH_ADD 
 	ret
-
-

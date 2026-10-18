@@ -36,4 +36,3 @@
 	;jp F_snaptest		; Modulecall
 .data
 STR_ident:	defb	"VFS BASIC extensions",0
-

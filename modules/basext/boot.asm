@@ -102,6 +102,8 @@ F_boot:
 	call PRINT42
 	ret
 
+	ret
+
 ;--------------------------------------------------------------------------
 ; F_shouldboot: See if we should boot (either configured to do so or
 ; SHIFT is pressed down) Zero flag is set if we should boot, non zero
@@ -132,4 +134,3 @@ F_shouldboot:
 .data	
 STR_bootmsg:	defb "Booting...",NEWLINE,0
 STR_loaderr:	defb "Error loading boot.zx",NEWLINE,0
-

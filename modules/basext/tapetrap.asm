@@ -56,6 +56,8 @@ F_settrap:
 	call SETTRAP
 	ret
 
+	ret
+
 TAPETRAPBLOCK:
 	defb	0xFF		; this page
 	defw	F_loadbytes	; function to call
@@ -233,4 +235,3 @@ F_bootfile:
 DEFAULTFILE:
 	defb	"boot.zx6",0
 DEFAULTFILELEN: equ $-DEFAULTFILE
-

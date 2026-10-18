@@ -41,4 +41,3 @@ FILE_ADDR		equ 0x3001	; storage of file address
 COPY_ERRNO		equ 0x3000	; errno during copy operation
 SRC_FD			equ 0x3001	; source file descriptor
 DST_FD			equ 0x3002	; destination file descriptor
-

@@ -228,11 +228,12 @@ F_FlashWriteByte:
 
 ;---------------------------------------------------------------------------
 ; F_writesector
-; Writes 4 pages from SRAM to flash, starting at the page specified in A
+; Writes 4 pages from the last 4 pages of RAM to flash, starting at the
+; page specified in A
 .globl F_writesector
 F_writesector: 
 	ex af, af'	; swap with alternate set
-	ld a, FLASH_COPY_PAGES	; first page of SRAM sector copy
+	ld a, 0xDC	; RAM page 0xDC
 	ld b, 4		; number of pages
 .loop4: 
 	push bc

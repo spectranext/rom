@@ -21,7 +21,6 @@
 ;THE SOFTWARE.
 .include	"spectranet.inc"
 .include	"sysvars.inc"
-.include	"sysdefs.inc"
 .text
 
 FLASHPROGSTART:
@@ -32,10 +31,10 @@ F_updateflash:
         push af
         ld a, (v_pgb)
         push af
-        ld a, CONFIG_PAGE&0xFC   ; erase sector containing configuration data
+        ld a, 0x1C              ; last sector of flash
         call F_FlashEraseSector
         jr c,  .cleanup1
-        ld a, CONFIG_PAGE&0xFC   ; start page to write
+        ld a, 0x1C              ; start page to write
         call F_writesector
 .cleanup1: 
         ex af, af'              ; preserve flags

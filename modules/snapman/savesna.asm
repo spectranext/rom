@@ -27,7 +27,6 @@
 .include	"snapman.inc"
 .include	"spectranet.inc"
 .include	"sysvars.inc"
-.include	"sysdefs.inc"
 
 .text 
 ;--------------------------------------------------------------------------

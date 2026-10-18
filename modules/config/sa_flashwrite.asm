@@ -20,15 +20,13 @@
 ;OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 ;THE SOFTWARE.
 
-.include	"sysdefs.inc"
-
 .globl F_updateflash
 F_updateflash: 
         di
-        ld a, CONFIG_PAGE&0xFC   ; erase sector containing configuration data
+        ld a, 0x1C              ; last sector of flash
         call F_FlashEraseSector
         jr c,  .cleanup1
-        ld a, CONFIG_PAGE&0xFC   ; start page to write
+        ld a, 0x1C              ; start page to write
         call F_writesector
 .cleanup1: 
 	ld a, 2

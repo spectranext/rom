@@ -78,4 +78,3 @@ STARTTRAPBLOCK:
 	defw	0x1299		; stacked address at time of NMI
 	defw	0x1296		; address to trap with NMI
 
-

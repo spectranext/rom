@@ -27,7 +27,7 @@
 ;---------------------------------------------------------------------------
 ; do_callbas
 ; Not really a trap, but it handles the effects of an RST 0x10 'callbas'
-; exit (which will get re-trapped by a subsequent return via RST 8)
+; exit. The Spectrum ROM routine returns through the fixed-RAM PAGEIN entry.
 .text
 .globl do_callbas
 do_callbas:

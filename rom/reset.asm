@@ -77,6 +77,7 @@ J_reset:
 
 	; Initialize some system variables that need it.
 
+
 	; This is a rather poor way of generating a random number seed,
 	; but it's the best we can do given Spectrum hardware. On power
 	; up or after each reset, the machine's memory will be in a slightly
