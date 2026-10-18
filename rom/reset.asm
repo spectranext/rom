@@ -27,6 +27,8 @@
 .include	"ctrlchars.inc"
 .include	"stdmodules.inc"
 .include	"page3.xinc"
+.include	"zxrom.inc"
+.include	"zxsysvars.inc"
 
 ; Locations in the data rom that need to be copied.
 ; The jump table lives in the first 256 bytes of ROM3
@@ -34,6 +36,12 @@ JUMPTABLE_COPYFROM: 	equ 0x1F00
 JUMPTABLE_SIZE:		equ 0xF8
 UPPER_ENTRYPT:		equ 0x1FF8
 UPPER_ENTRYPT_SIZE:	equ 0x08
+INIT_MAGIC_0:		equ 0x53A7
+INIT_MAGIC_1:		equ 0xD91C
+; Stable .spx handoff block: "SPXA", version 1, byte length, two reserved
+; bytes, then a zero-terminated raw tail. Future ROMs can identify this ABI.
+SPX_HANDOFF:		equ 0x8080
+SPX_BASIC_SP:		equ 0x8100
 
 ; Initialization routines that are run on reset.
 ;
@@ -54,9 +62,89 @@ J_reset:
 	ld a, b
 	or c
 	jr nz, .delay0
-	
+
+	; J_reset_common clears the entire fixed-RAM page, including NMISTACK.
+	; Keep this CALL's return address above the cartridge window until that
+	; clear has completed.  The deferred entry already arrives with such a
+	; high-memory stack supplied by its setup trampoline.
+	ld sp, 32767
+	call J_reset_common
+
+	; Restore the traditional private Spectranet stack for BASSTART callbacks.
+	ld sp, NMISTACK
+	ld a, 3			; Page where F_basstart lives
+	call F_setpageB
+	call F_basstart_setup
+	call F_clear
+
+	ld sp, 32767		; lowest guaranteed stack addr
+	ld hl, 0		; We're done so put 0x0000
+	push hl			; on the stack
+	jp PAGEOUT		; unpage (a ret instruction)
+
+; Software entry used after an OS-hosted dot command has safely left the
+; DivMMC environment.  It performs the same core initialization as reset,
+; runs BASSTART vectors immediately, and returns through the caller's stack.
+.globl J_deferred_init
+J_deferred_init:
+	; Setup passes HL=$8080. Inspect the command before cold initialization
+	; or BASSTART can change Spectrum RAM containing future argument data.
+	call F_spx_command_line
+	ret c ; explicit command returns through the existing high-RAM page-out
+	; The dot command may be run repeatedly.  Do not clear fixed RAM or rerun
+	; module initialization once a previous cold or deferred startup completed.
+	ld hl, (v_init_magic)
+	ld de, INIT_MAGIC_0
+	or a
+	sbc hl, de
+	jr nz, .initialize_deferred0
+	ld hl, (v_init_magic+2)
+	ld de, INIT_MAGIC_1
+	or a
+	sbc hl, de
+	jr nz, .initialize_deferred0
+	ret
+.initialize_deferred0:
+	call J_reset_common
+	call F_deferred_basic_colours
+	; The setup stage owns a private stack in ordinary RAM. F_boot still needs
+	; BASIC's saved SP, but deferred initialization never switches SP itself.
+	; Restore this pointer after reset_common clears the fixed-RAM page.
+	ld hl, (SPX_BASIC_SP)
+	ld (NMISTACK), hl
+	ld a, 3
+	call F_setpageB
+	call F_basstart_direct
+	; Return to the high-RAM setup stage on its private stack. It reconstructs
+	; BASIC's continuation and performs the final EI/page-out pairing.
+	ret
+
+; HL points to the versioned SPX handoff block ($8080). Its argument tail
+; starts at HL+8 and is bounded and zero-terminated.
+; The controller page parses the stable raw tail, including repeated calls.
+ .section spxgate
+F_spx_command_line:
+    ld a, CMD_SYS_DOT_DISPATCH
+    call F_spectranext_op
+    ret nc                       ; ordinary delayed initialization
+    or a
+    jr nz, .spx_command_error
+    scf                          ; setup returns normally and pages out
+    ret                          ; controller resets both devices afterward
+.spx_command_error:
+    push af
+    call F_clear                 ; direct ROM helpers work before init
+    ld hl, 0x8200                ; error message copied by controller ROM
+    call F_print
+    pop af
+    scf                          ; handled error returns to the caller
+    ret
+
+.text
+
+; Initialization shared by cold reset and deferred startup.
+J_reset_common:
 	; Clear upper page.
-	ld sp, NMISTACK		; use our own memory for the stack
 	ld hl, 0x3000		; Clear down the fixed RAM page.
 	ld de, 0x3001
 	ld bc, 0xFFF
@@ -152,21 +240,13 @@ J_reset:
 	call F_initroms		; Initialize any ROM modules we may have
 	ld hl, AUTOMOUNT	; call the automounter
 	rst MODULECALL_NOPAGE
-
-	; Detect machine type
-;	ld a, 0x03		; ROM with detect routine
-;	call F_setpageB
-;	call F_machinetype
-
-	ld a, 3			; Page where F_basstart lives
-	call F_setpageB
-	call F_basstart_setup
-	call F_clear
-
-	ld sp, 32767		; lowest guaranteed stack addr
-	ld hl, 0		; We're done so put 0x0000 
-	push hl			; on the stack
-	jp PAGEOUT		; unpage (a ret instruction)
+	; Publish completion only after ROM initialization and automount return.
+	; J_deferred_init uses both words to make accidental matches negligible.
+	ld hl, INIT_MAGIC_0
+	ld (v_init_magic), hl
+	ld hl, INIT_MAGIC_1
+	ld (v_init_magic+2), hl
+	ret
 
 ;------------------------------------------------------------------------
 ; F_initroms
@@ -214,6 +294,28 @@ F_initroms:
 	pop bc
 	pop hl
 	jr .initloop1
+
+; Split across two linker zones because reset.o fills the first guarded zone.
+; F_clear uses Spectranet's blue UI colours; deferred initialization instead
+; retains its bitmap while presenting it with stock BASIC's colours.
+.section defcolor
+F_deferred_basic_colours:
+	ld a, 7
+	out (ZX_IO_ULA), a
+	ld a, 0x38		; black ink on white paper
+	ld (ZX_BORDCR), a
+	jp F_deferred_basic_paper
+
+.section defpaper
+F_deferred_basic_paper:
+	ld (ZX_ATTR_P), a
+	ld (ZX_ATTR_T), a
+	ld hl, 0x5800
+	ld de, 0x5801
+	ld bc, 0x02ff
+	ld (hl), a
+	ldir
+	ret
 
 .data
 STR_bootmsg:

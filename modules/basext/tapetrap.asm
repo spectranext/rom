@@ -24,6 +24,7 @@
 .include	"fcntl.inc"
 .include	"sysvars.inc"
 .include	"errno.inc"
+.include	"stdmodules.inc"
 .text
 ; Initialize and handle tape traps.
 
@@ -47,6 +48,28 @@ F_settrap_path:
 	ld e, O_RDONLY		; read only
 	call OPEN
 	ret c			; exit now on error
+	jr .opened
+
+; F_settrap_xopen: same TAP trap, but the XFS module opens an absolute
+; controller-overlay path without consulting or changing the four VFS mounts.
+.globl F_settrap_xopen
+F_settrap_xopen:
+	ld hl, INTERPWKSPC
+	call F_basstrcpy
+	ld hl, INTERPWKSPC
+.globl F_settrap_xopen_path
+F_settrap_xopen_path:
+	ld a, (v_trapfd)
+	and a
+	call nz, F_releasetrap
+	push ix
+	push hl
+	pop ix
+	ld hl, XFS_XOPEN
+	rst MODULECALL_NOPAGE
+	pop ix
+	ret c
+.opened:
 	ld (v_trapfd), a	; save the file descriptor
 	
 	ld de, v_trap_blklen	; read the TAP block length to "prime the
@@ -156,15 +179,40 @@ F_loadbytes_nopush:		; (if IX has already been pushed)
 	ld c, l
 	jr nz, .readloop4	; continue until 0 bytes remain
 
+	; Consume the checksum separately from the next block length.  Combining
+	; both in one three-byte read made the final checksum look like a
+	; successful short read and left the programmable trap armed at EOF.
 	ld a, (v_trapfd)
-	ld bc, 3		; now read the "check sum" + next block length
+	ld bc, 1
 	ld de, INTERPWKSPC
 	push ix
 	call READ
 	pop ix
-	jr c, .checkeof4		; EOF?
-	ld hl, (INTERPWKSPC+1)	; Get the length of the next block and copy
-	ld (v_trap_blklen), hl	; to the length storage.
+	jr c, .cleanuperror24	; a completed TAP block must have a checksum
+	ld a, b
+	or a
+	jr nz, .cleanuperror24
+	ld a, c
+	cp 1
+	jr nz, .cleanuperror24
+
+	; Retain the trap only when a complete two-byte next-block length exists.
+	ld a, (v_trapfd)
+	ld bc, 2
+	ld de, v_trap_blklen
+	push ix
+	call READ
+	pop ix
+	jr c, .checkeof4		; EOF after the checksum is normal
+	ld a, b
+	or a
+	jr nz, .cleanuperror24
+	ld a, c
+	cp 2
+	jr z, .success4
+	or a
+	jr z, .endofstream4	; also accept a zero-byte successful EOF read
+	jr .cleanuperror24	; one byte is a truncated block length
 .success4:
 	ld (ix+2), 1		; set carry flag in return stack
 	jp PAGETRAPRETURN
@@ -172,6 +220,7 @@ F_loadbytes_nopush:		; (if IX has already been pushed)
 .checkeof4:
 	cp EOF			; End of file - not an error condition
 	jr nz, .cleanuperror24
+.endofstream4:
 	call F_releasetrap	; Close the file and release the trap
 	ld (ix+2), 1		; Signal success to ROM
 	jp PAGETRAPRETURN
@@ -199,6 +248,8 @@ J_cleanup_traperr:
 	push af
 	ld a, (v_trapfd)
 	call VCLOSE
+	xor a
+	ld (v_trapfd), a
 	pop af
 	ret
 
