@@ -22,6 +22,7 @@
 .include	"w5100_defs.inc"
 .include	"sysvars.inc"
 .include	"sockdefs.inc"
+.include "spectranet.inc"
 
 ; Socket control routines. In this file:
 ; F_bind
@@ -101,6 +102,34 @@ F_listen:
 .globl F_connect
 F_connect:
 	call F_gethwsock	; H = socket register bank MSB
+	jp c, J_leavesockfn
+; Exact marker 198.18.0.1. Preserve the caller's address pointer and port
+; on every ordinary-CONNECT path. The check, including PUSH/POP DE, is 23
+; bytes; the matched branch adds 11 bytes for direct module dispatch.
+	push de
+	ld a, (de)
+	cp 198
+	jr nz, .ordinary_connect
+	inc de
+	ld a, (de)
+	cp 18
+	jr nz, .ordinary_connect
+	inc de
+	ld a, (de)
+	or a
+	jr nz, .ordinary_connect
+	inc de
+	ld a, (de)
+	dec a
+	jr nz, .ordinary_connect
+	pop de
+	ld a, h
+	sub 0x14                ; register-page MSB -> controller socket 0..3
+	ld hl, 0xf000           ; matchmaking module F0, entry selector 0
+	rst MODULECALL_NOPAGE
+	jp J_leavesockfn
+.ordinary_connect:
+	pop de
 	ld l, Sn_DPORT0 % 256	; destination port register
 	ld (hl), b		; high order of port
 	inc l
@@ -119,7 +148,7 @@ F_connect:
 	ld hl, (v_localport)	; update the local port number
 	inc hl
 	ld (v_localport), hl
-	
+
 	ex de, hl
 	ld l, Sn_CR % 256	; command register
 	ld (hl), S_CR_CONNECT	; instruction to connect to remote host
@@ -144,4 +173,3 @@ F_connect:
 	set BIT_IR_CON, (hl)	; reset interrupt bit
 	xor a			; connection OK
 	jp J_leavesockfn
-
