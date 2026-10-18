@@ -41,6 +41,7 @@
 .include	"zxrom.inc"
 .include	"zxsysvars.inc"
 .include	"ctrlchars.inc"
+.include	"errno.inc"
 .include	"fcntl.inc"
 .include	"stdmodules.inc"
 .include	"automount.inc"
@@ -103,6 +104,80 @@ F_boot:
 	call PRINT42
 	ret
 
+;--------------------------------------------------------------------------
+; F_loadresource_modcall: Mount and load a resource URL for applications.
+; Parameters: DE = pointer to a null-terminated URL in Spectrum RAM.
+; Returns carry set and A = error code on failure. On success, boot.zx is
+; loaded and its autorun is prepared before returning to the caller.
+.globl F_loadresource_modcall
+F_loadresource_modcall:
+	ld ix, INTERPWKSPC
+	ld hl, PARSEURL
+	rst MODULECALL_NOPAGE
+	ret c
+
+	; Resource mounts may use any available slot, including slot 0. Keep the
+	; selected slot in C because MOUNT is free to alter the other registers.
+	ld hl, VFSVECBASE
+	ld b, 4
+	ld c, 0
+.find_resource_mount:
+	ld a, (hl)
+	and a
+	jr z, .resource_mount_found
+	inc hl
+	inc c
+	djnz .find_resource_mount
+	ld a, TMPBUSY
+	scf
+	ret
+
+.resource_mount_found:
+	push bc
+	ld a, c
+	call MOUNT
+	pop bc
+	ret c
+	ld a, c
+	call SETMOUNTPOINT
+	ret c
+
+	; Reset the BASIC editing area just as the normal boot hook does before
+	; replacing the current program, while leaving the caller's stack intact.
+	rst CALLBAS
+	defw ZX_SET_MIN
+	ld a, 0
+	rst CALLBAS
+	defw ZX_CHAN_OPEN
+	ld a, 0xFF
+	ld (ZX_ERR_NR), a
+
+	; The filesystem call pages another module into area B, so copy the
+	; paged-module filename to common RAM before invoking the loader.
+	ld hl, STR_BOOTDOTZX
+	ld de, INTERPWKSPC
+	ld bc, STR_BOOTDOTZXLEN
+	ldir
+	ld hl, INTERPWKSPC
+	xor a			; file type = BASIC
+	call F_tbas_loader
+	ret c
+
+	; Match the successful F_boot autorun setup. The application that made
+	; the module call can now exit normally and return control to BASIC.
+	ld a, (INTERPWKSPC+OFFSET_PARAM1+1)
+	and 0xC0
+	jr nz, .resource_loaded
+	ld hl, (ZX_NEWPPC)
+	ld (ZX_OLDPPC), hl
+	ld a, 0xE8		; keyword CONTINUE
+	rst CALLBAS
+	defw 0x0F81		; ADD-CHAR
+	ld a, NEWLINE
+	rst CALLBAS
+	defw 0x0F81
+.resource_loaded:
+	or a			; success: clear carry
 	ret
 
 ;--------------------------------------------------------------------------
